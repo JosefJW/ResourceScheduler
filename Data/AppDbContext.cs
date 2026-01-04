@@ -21,7 +21,31 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<FamilyMembership>()
             .HasKey(fm => new { fm.UserId, fm.FamilyId });
 
-        modelBuilder.Entity<Reservation>()
-            .HasCheckConstraint("ck_reservation_time", "\"StartTime\" < \"EndTime\"");
+        modelBuilder.Entity<Reservation>(entity =>
+        {
+            entity.ToTable(tb => tb.HasCheckConstraint("ck_reservation_time", "\"StartTime\" < \"EndTime\""));
+
+            entity.HasOne(r => r.Item)
+                .WithMany(i => i.Reservations)
+                .HasForeignKey(r => r.ItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.User)
+                .WithMany(u => u.Reservations)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FamilyMembership>()
+            .HasOne(fm => fm.Family)
+            .WithMany(f => f.Memberships)
+            .HasForeignKey(fm => fm.FamilyId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<FamilyMembership>()
+            .HasOne(fm => fm.User)
+            .WithMany(u => u.Memberships)
+            .HasForeignKey(fm => fm.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

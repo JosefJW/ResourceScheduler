@@ -7,4 +7,5 @@ public class Item
     public string Name { get; set; } = "";
     public string Type { get; set; } = "";
     public bool IsActive { get; set; } = true;
+    public List<Reservation> Reservations { get; set; } = [];
 }
