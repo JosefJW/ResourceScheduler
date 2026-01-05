@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { signup } from "./../services/auth";
 
 export default function Signup() {
 	const [username, setUsername] = useState("");
@@ -13,9 +14,15 @@ export default function Signup() {
 			document.title = "Grabbit - Signup";
 		}, []);
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		console.log({ username, email, password });
+	async function handleSignupSubmit() {
+		try {
+			const signupRes = await signup({username, email, password});
+			localStorage.setItem("JWT", signupRes.token);
+			navigate("/home");
+		}
+		catch (err: any) {
+			alert(err.detail);
+		}
 	};
 
 	return (
@@ -48,7 +55,7 @@ export default function Signup() {
 					Join Grabbit!
 				</h1>
 
-				<form className="w-full space-y-4" onSubmit={handleSubmit}>
+				<form className="w-full space-y-4" onSubmit={(e) => { e.preventDefault(); handleSignupSubmit(); }}>
 					{[
 						{ type: "text", value: username, setter: setUsername, placeholder: "Username" },
 						{ type: "email", value: email, setter: setEmail, placeholder: "Email" },

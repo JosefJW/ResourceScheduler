@@ -2,9 +2,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { login } from "../services/auth";
 
 export default function Login() {
-	const [email, setEmail] = useState("");
+	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const navigate = useNavigate();
 
@@ -12,9 +13,15 @@ export default function Login() {
 			document.title = "Grabbit - Login";
 		}, []);
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		console.log({ email, password });
+	async function handleLoginSubmit() {
+		try {
+			const loginRes = await login({ username, password });
+			localStorage.setItem("JWT", loginRes.token);
+			navigate("/home");
+		}
+		catch (err: any) {
+			alert(err.detail);
+		}
 	};
 
 	return <div>
@@ -47,9 +54,9 @@ export default function Login() {
 					Welcome Back!
 				</h1>
 
-				<form className="w-full space-y-4" onSubmit={handleSubmit}>
+				<form className="w-full space-y-4" onSubmit={(e) => { e.preventDefault(); handleLoginSubmit(); }}>
 					{[
-						{ type: "email", value: email, setter: setEmail, placeholder: "Email" },
+						{ type: "username", value: username, setter: setUsername, placeholder: "Username" },
 						{ type: "password", value: password, setter: setPassword, placeholder: "Password" },
 					].map((input, idx) => (
 						<motion.input

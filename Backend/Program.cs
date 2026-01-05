@@ -44,6 +44,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Let frontend interact
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocal",
+        policy => policy.WithOrigins("https://localhost:5173")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod());
+});
+
+
 // JWT
 builder.Services.AddAuthentication(options =>
 {
@@ -74,6 +84,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(); // defaults to /swagger
 }
+
+// Let frontend interact
+app.UseCors("AllowLocal");
 
 app.UseHttpsRedirection();
 

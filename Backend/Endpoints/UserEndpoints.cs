@@ -84,10 +84,16 @@ public static class UserEndpoints
 		app.MapPost("/login", async (LoginRequest req, AppDbContext db, IConfiguration config) =>
 		{
 			var user = await db.Users.FirstOrDefaultAsync(u => u.Name == req.Username);
-			if (user == null) return Results.NotFound();
+			if (user == null) return Results.Problem(
+					detail: "Username not found.",
+					statusCode: 404
+				);
 
 			if (!PasswordsMatch(req.Password, user.PasswordHash, user.PasswordSalt))
-				return Results.Unauthorized();
+				return Results.Problem(
+					detail: "Incorrect password.",
+					statusCode: 401
+				);
 			
 			var token = JwtService.GenerateToken(user, config);
 
