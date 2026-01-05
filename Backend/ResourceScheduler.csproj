@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <!-- OpenAPI / Swagger -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0-preview.*" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
 
     <!-- EF Core core library -->

@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Family> Families => Set<Family>();
     public DbSet<FamilyMembership> FamilyMemberships => Set<FamilyMembership>();
+    public DbSet<FamilyInvitation> FamilyInvitations => Set<FamilyInvitation>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
 
@@ -47,5 +48,29 @@ public class AppDbContext : DbContext
             .WithMany(u => u.Memberships)
             .HasForeignKey(fm => fm.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<FamilyInvitation>(entity =>
+        {
+            entity.HasKey(fi => fi.Id);
+
+            entity.HasOne(fi => fi.Family)
+                .WithMany()
+                .HasForeignKey(fi => fi.FamilyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(fi => fi.InvitedUser)
+                .WithMany()
+                .HasForeignKey(fi => fi.InvitedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(fi => fi.InviterUser)
+                .WithMany()
+                .HasForeignKey(fi => fi.InviterUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(fi => new { fi.FamilyId, fi.InvitedUserId })
+                .IsUnique();
+        });
+
     }
 }
