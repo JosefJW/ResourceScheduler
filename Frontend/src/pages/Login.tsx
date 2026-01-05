@@ -21,12 +21,12 @@ export default function Login() {
 		<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-200 via-yellow-200 to-pink-200 p-4">
 			{/* Home Button */}
 			<motion.div
-				className="cursor-pointer w-16 h-16 absolute top-4 left-4 bg-purple-400 text-white rounded-full text-lg font-bold flex items-center justify-center"
+				className="cursor-pointer w-16 h-16 absolute top-4 left-4 text-white rounded-full text-lg font-bold flex items-center justify-center"
 				whileHover={{ scale: 1.2 }}
 				transition={{ type: "spring", stiffness: 500 }}
 				onClick={() => navigate("/")}
 			>
-				Home
+				<div className="ml-5 w-8 h-8 border-l-8 border-r-0 border-b-8 border-black transform rotate-45"></div>
 			</motion.div>
 			{/* Card */}
 			<motion.div

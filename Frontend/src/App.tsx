@@ -8,6 +8,7 @@ import Settings from "./pages/Settings";
 import Family from "./pages/Family";
 import AddItem from "./pages/AddItem";
 import ReserveItem from "./pages/ReserveItem";
+import Reservation from "./pages/Reservation";
 
 function App() {
   return (
@@ -21,7 +22,8 @@ function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/family/:id" element={<Family />} />
         <Route path="/add-item" element={<AddItem />} />
-        <Route path="/reserve/:itemId" element={<ReserveItem />} />
+        <Route path="/reserve/" element={<ReserveItem />} />
+        <Route path="/reservation/:reservationId" element={<Reservation />} />
       </Routes>
     </Router>
   );

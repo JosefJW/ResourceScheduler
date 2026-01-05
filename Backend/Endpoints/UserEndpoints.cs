@@ -47,6 +47,9 @@ public static class UserEndpoints
 		// Create a new user
 		app.MapPost("/signup", async (SignupRequest req, AppDbContext db, IConfiguration config) =>
 		{
+			if (req.Username.Length < 3) return Results.BadRequest("Username is too short.");
+			if (req.Username.Length > 32) return Results.BadRequest("Username is too long.");
+
 			var usernameTaken = await db.Users.AnyAsync(u => u.Name == req.Username);
 			if (usernameTaken) return Results.Conflict("Username is taken.");
 
@@ -70,10 +73,7 @@ public static class UserEndpoints
 			
 			return Results.Ok(new
 			{
-				token,
-				user.Id,
-				user.Name,
-				user.Email
+				token
 			});
 		});
 
@@ -93,10 +93,7 @@ public static class UserEndpoints
 
 			return Results.Ok(new
 			{
-				token,
-				user.Id,
-				user.Name,
-				user.Email
+				token
 			});
 		});
 
