@@ -2,7 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import NewGroupModal from "../components/NewGroupModal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createFamily, getFamilies, type GetFamiliesResult } from "./../services/family"
+import toast from "react-hot-toast";
+import { acceptInvite, declineInvite, getInvites, type GetInvitesResult } from "../services/invites";
 
 type Reservation = {
 	id: number;
@@ -28,12 +31,68 @@ type Invite = {
 
 export default function Home() {
 	const [newGroupModalOpen, setNewGroupModalOpen] = useState(false);
+	const [groups, setGroups] = useState<GetFamiliesResult[]>([]);
+	const [invites, setInvites] = useState<GetInvitesResult[]>([]);
 	const navigate = useNavigate();
 
-	const handleCreateGroup = (name: string) => {
-		// TODO: call backend API here
-		// TODO: Update groups list with new group
+	async function handleCreateGroup(name: string) {
+		try {
+			await createFamily({ name: name });
+			toast.success("Created " + name);
+		}
+		catch (err: any) {
+			toast.error(err.detail);
+		}
+
+		await getGroups();
 	};
+
+	async function getGroups() {
+		try {
+			const families = await getFamilies();
+			setGroups(families);
+		}
+		catch (err: any) {
+			toast.error(err.detail);
+		}
+	}
+
+	async function getMyInvites() {
+		try {
+			const invites = await getInvites();
+			setInvites(invites);
+		}
+		catch (err: any) {
+			toast.error(err.detail);
+		}
+	}
+
+	async function handleInviteAccept(inviteId: number, familyId: number) {
+		try {
+			await acceptInvite({ familyId, inviteId });
+			await getMyInvites();
+			await getGroups();
+		}
+		catch (err: any) {
+			toast.error(err.detail);
+		}
+	}
+
+	async function handleInviteDecline(inviteId: number, familyId: number) {
+		// TODO
+		try {
+			await declineInvite({ familyId, inviteId });
+			await getMyInvites();
+		}
+		catch (err: any) {
+			toast.error(err.detail);
+		}
+	}
+
+	useEffect(() => {
+		getGroups();
+		getMyInvites();
+	}, [])
 
 	// Fake week data
 	const weekDays: Day[] = [
@@ -84,21 +143,8 @@ export default function Home() {
 		},
 	];
 
-	// Fake families
-	const families: Family[] = [
-		{ id: 1, name: "CS House" },
-		{ id: 2, name: "Startup Team" },
-		{ id: 3, name: "Chess Club" },
-	];
-
-	// Fake invites
-	const invites: Invite[] = [
-		{ id: 1, familyName: "Work", from: "Bob" },
-		{ id: 2, familyName: "Wolf", from: "Josef" }
-	]
-
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
+		<div className="min-h-screen pb-10 bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
 			<Navbar></Navbar>
 			<div className="px-6 mt-6">
 				{/* Calendar */}
@@ -141,7 +187,7 @@ export default function Home() {
 					Make a Reservation
 				</button>
 
-				{/* Families */}
+				{/* Groups */}
 				<div className="mt-8">
 					<div className="flex items-center justify-between mb-3">
 						<h2 className="text-lg font-bold text-purple-500">
@@ -161,17 +207,18 @@ export default function Home() {
 						/>
 					</div>
 					<div className="space-y-3">
-						{families.map(family => (
+						{groups.length > 0 ? groups.map(group => (
 							<div
-								key={family.id}
-								onClick={() => navigate(`/family/${family.id}`)}
+								key={group.id}
+								onClick={() => navigate(`/family/${group.id}`)}
 								className="cursor-pointer rounded-2xl bg-white p-4 shadow hover:bg-purple-50 transition"
 							>
 								<h3 className="font-semibold text-purple-600">
-									{family.name}
+									{group.name}
 								</h3>
 							</div>
-						))}
+						))
+						:	<div>You aren't in any groups!</div>}
 					</div>
 				</div>
 
@@ -188,22 +235,25 @@ export default function Home() {
 								key={invite.id}
 								className="rounded-2xl bg-white p-4 shadow flex flex-row items-center"
 							>
-								<h3 className="font-semibold text-purple-600">
-									{invite.familyName}
-								</h3>
-								<h4 className="font-semibold text-sm text-purple-600 ml-5">
-									From {invite.from}
-								</h4>
+								<div className="flex flex-col">
+									<h3 className="font-semibold text-lg text-purple-600">
+										{invite.familyName}
+									</h3>
+									<h4 className="font-semibold text-sm text-purple-600">
+										From {invite.inviterName} at {new Date(invite.createdAt).toLocaleString()}
+									</h4>
+								</div>
 								<div className="ml-auto flex flex-row">
 									{/* TODO onClick for decline */}
 									<div
 										className="cursor-pointer rounded-xl text-white bg-red-600 p-4 shadow hover:bg-red-700 transition"
+										onClick={() => {handleInviteDecline(invite.id, invite.familyId)}}
 									>
 										Decline
 									</div>
-									{/* TODO onClick for accept */}
 									<div
 										className="cursor-pointer rounded-xl text-white bg-green-600 p-4 shadow hover:bg-green-700 transition ml-5"
+										onClick={() => {handleInviteAccept(invite.id, invite.familyId)}}
 									>
 										Accept
 									</div>

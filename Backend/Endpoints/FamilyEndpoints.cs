@@ -172,12 +172,18 @@ public static class FamilyEndpoints
 		{
 			// Get the userId from the JWT
 			var userId = HttpContextExtensions.GetUserId(ctx);
-			if (userId == null) return Results.Unauthorized();
+			if (userId == null) return Results.Problem(
+				detail: "Must be logged in.",
+				statusCode: 401
+			);
 
 			// Get the invite
 			var invite = await db.FamilyInvitations
 				.FirstOrDefaultAsync(i => i.Id == inviteId && i.FamilyId == familyId && i.InvitedUserId == userId.Value);
-			if (invite == null) return Results.NotFound();
+			if (invite == null) return Results.Problem(
+				detail: "Invitation not found.",
+				statusCode: 404
+			);
 			if (invite.Responded) return Results.Conflict("Invitation already responded to.");
 
 			// Add the user as a member

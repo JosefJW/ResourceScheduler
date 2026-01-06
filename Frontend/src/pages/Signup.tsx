@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { signup } from "./../services/auth";
+import toast from "react-hot-toast";
 
 export default function Signup() {
 	const [username, setUsername] = useState("");
@@ -21,7 +22,7 @@ export default function Signup() {
 			navigate("/home");
 		}
 		catch (err: any) {
-			alert(err.detail);
+			toast.error(err.detail);
 		}
 	};
 

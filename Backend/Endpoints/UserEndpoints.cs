@@ -47,14 +47,26 @@ public static class UserEndpoints
 		// Create a new user
 		app.MapPost("/signup", async (SignupRequest req, AppDbContext db, IConfiguration config) =>
 		{
-			if (req.Username.Length < 3) return Results.BadRequest("Username is too short.");
-			if (req.Username.Length > 32) return Results.BadRequest("Username is too long.");
+			if (req.Username.Length < 3) return Results.Problem(
+					detail: "Username is too short.",
+					statusCode: 400 // BadRequest
+				);
+			if (req.Username.Length > 32) return Results.Problem(
+					detail: "Username is too long.",
+					statusCode: 400 // BadRequest
+				);
 
 			var usernameTaken = await db.Users.AnyAsync(u => u.Name == req.Username);
-			if (usernameTaken) return Results.Conflict("Username is taken.");
+			if (usernameTaken) return Results.Problem(
+					detail: "Username is taken.",
+					statusCode: 409 // Conflict	
+				);
 
 			var emailTaken = await db.Users.AnyAsync(u => u.Email == req.Email);
-			if (emailTaken) return Results.Conflict("Email is taken.");
+			if (emailTaken) return Results.Problem(
+					detail: "Email is taken.",
+					statusCode: 409 // Conflict
+				);
 
 			var (hash, salt) = HashPassword(req.Password);
 			

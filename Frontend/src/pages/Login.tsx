@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { login } from "../services/auth";
+import toast from "react-hot-toast";
 
 export default function Login() {
 	const [username, setUsername] = useState("");
@@ -20,7 +21,7 @@ export default function Login() {
 			navigate("/home");
 		}
 		catch (err: any) {
-			alert(err.detail);
+			toast.error(err.detail);
 		}
 	};
 

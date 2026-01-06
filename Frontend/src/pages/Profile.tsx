@@ -14,6 +14,11 @@ export default function Profile() {
 		alert("Saved! (connect me to backend 😎)");
 	};
 
+	const handleLogout = () => {
+		localStorage.removeItem("JWT");
+		navigate("/");
+	}
+
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100 flex flex-col items-center p-6">
 			<motion.div
@@ -68,6 +73,12 @@ export default function Profile() {
 					className="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
 				>
 					Save Changes
+				</button>
+				<button
+					onClick={handleLogout}
+					className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition-transform hover:scale-[1.02] active:scale-[0.98]"
+				>
+					Logout
 				</button>
 			</div>
 		</div>

@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoggedOutRoute from "./components/LoggedOutRoute";
 
@@ -15,7 +17,7 @@ import Reservation from "./pages/Reservation";
 import NotFound from "./pages/NotFound";
 
 function App() {
-	return (
+	return <>
 		<Router>
 			<Routes>
 				{/* Public routes */}
@@ -106,7 +108,8 @@ function App() {
 				<Route path='*' element={<NotFound />} />
 			</Routes>
 		</Router>
-	);
+    <Toaster position="top-center" reverseOrder={false}></Toaster>
+  </>;
 }
 
 export default App;
