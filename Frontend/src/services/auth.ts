@@ -2,25 +2,18 @@ import axios from "axios";
 
 const API_BASE = "http://localhost:5069";
 
-export type SignupResult = {
-	token: string;
-};
-
-export type LoginResult = {
-	token: string;
-}
-
-export type GetUserResult = {
-	username: string;
-	email: string;
-}
-
 export type ApiError = {
 	detail: string;
 	statusCode: number;
 	title: string;
 	type: string;
 }
+
+
+
+export type SignupResult = {
+	token: string;
+};
 
 export async function signup(data: { username: string; email: string; password: string }) {
 	try {
@@ -34,6 +27,12 @@ export async function signup(data: { username: string; email: string; password: 
 
 }
 
+
+
+export type LoginResult = {
+	token: string;
+}
+
 export async function login(data: { username: string; password: string }) {
 	try {
 		const res = await axios.post<LoginResult>(`${API_BASE}/login`, data);
@@ -43,6 +42,13 @@ export async function login(data: { username: string; password: string }) {
 		const errorData: ApiError = err.response?.data || { message: "Unknown error" };
 		throw errorData; // Unsuccessful login
 	}
+}
+
+
+
+export type GetUserResult = {
+	username: string;
+	email: string;
 }
 
 export async function getUser() {

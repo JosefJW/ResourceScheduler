@@ -1,70 +1,130 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Navbar from "../components/Navbar";
 import NewMemberModal from "../components/NewMemberModal";
 import NewItemModal from "../components/NewItemModal";
-import Navbar from "../components/Navbar";
+import toast from "react-hot-toast";
+import { getFamilyMembers, type GetFamilyMembersResult } from "../services/family";
+import { addItem, getFamilyItems, type GetFamilyItemsResult } from "../services/item";
+import { getFamilyReservations, type GetFamilyReservationsResult } from "../services/reservation";
+import { createInvite } from "../services/invites";
+
+type Day = {
+	label: string;
+	date: string;
+	reservations: { id: number; itemName: string }[];
+};
+
+function getCurrentWeek() {
+	const now = new Date();
+	const dayOfWeek = now.getDay(); // 0 = Sunday
+	const monday = new Date(now);
+	monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7)); // shift to Monday
+	monday.setHours(0, 0, 0, 0);
+
+	const sunday = new Date(monday);
+	sunday.setDate(monday.getDate() + 6);
+	sunday.setHours(23, 59, 59, 999);
+
+	return { startOfWeek: monday, endOfWeek: sunday };
+}
+
+function mapReservationsToWeek(reservations: GetFamilyReservationsResult[]): Day[] {
+	const { startOfWeek } = getCurrentWeek();
+
+	return Array.from({ length: 7 }).map((_, i) => {
+		const dayDate = new Date(startOfWeek);
+		dayDate.setDate(startOfWeek.getDate() + i);
+		const dayStr = dayDate.toISOString().split("T")[0];
+
+		const dayReservations = reservations
+			.filter(r => {
+				const start = new Date(r.startTime);
+				const end = new Date(r.endTime);
+				const dayStart = new Date(dayDate);
+				dayStart.setHours(0, 0, 0, 0);
+				const dayEnd = new Date(dayDate);
+				dayEnd.setHours(23, 59, 59, 999);
+
+				return start <= dayEnd && end >= dayStart;
+			})
+			.map(r => ({ id: r.id, itemName: r.itemName }));
+
+		return {
+			label: dayDate.toLocaleDateString("en-US", { weekday: "short" }),
+			date: dayStr,
+			reservations: dayReservations,
+		};
+	});
+}
 
 export default function Family() {
 	const navigate = useNavigate();
+	const { familyId } = useParams<{ familyId: string }>();
+	const parsedFamilyId = Number(familyId);
 
-	// Fake week data
-	const weekDays = [
-		{ label: "Mon", date: "2026-01-06", reservations: [{ id: 1, itemName: "Tent" }] },
-		{ label: "Tue", date: "2026-01-07", reservations: [] },
-		{ label: "Wed", date: "2026-01-08", reservations: [{ id: 2, itemName: "Kayak" }] },
-		{ label: "Thu", date: "2026-01-09", reservations: [] },
-		{ label: "Fri", date: "2026-01-10", reservations: [{ id: 3, itemName: "Grill" }] },
-		{ label: "Sat", date: "2026-01-11", reservations: [] },
-		{ label: "Sun", date: "2026-01-12", reservations: [] },
-	];
-
-	const membersFake = [
-		{ id: 1, username: "Alice", role: "owner" },
-		{ id: 2, username: "Bob", role: "admin" },
-		{ id: 3, username: "Charlie", role: "member" },
-	];
-
-	const itemsFake = [
-		{ id: 1, name: "Tent" },
-		{ id: 2, name: "Kayak" },
-		{ id: 3, name: "Grill" },
-	];
-
-	const [members, setMembers] = useState(membersFake);
-	const [items, setItems] = useState(itemsFake);
-
+	const [members, setMembers] = useState<GetFamilyMembersResult[]>([]);
+	const [items, setItems] = useState<GetFamilyItemsResult[]>([]);
+	const [reservations, setReservations] = useState<GetFamilyReservationsResult[]>([]);
 	const [memberModalOpen, setMemberModalOpen] = useState(false);
 	const [itemModalOpen, setItemModalOpen] = useState(false);
 
-	const handleAddMember = (username: string) => {
-		setMembers((prev) => [...prev, { id: Date.now(), username, role: "member" }]);
-	};
+	if (!familyId || Number.isNaN(parsedFamilyId)) navigate("/NotFound");
 
-	const handleAddItem = (name: string) => {
-		setItems((prev) => [...prev, { id: Date.now(), name }]);
-	};
+	useEffect(() => {
+		async function fetchData() {
+			try {
+				const mems = await getFamilyMembers({ familyId: parsedFamilyId });
+				setMembers(mems);
+				const its = await getFamilyItems({ familyId: parsedFamilyId });
+				setItems(its);
+				const resvs = await getFamilyReservations({ familyId: parsedFamilyId });
+				setReservations(resvs);
+			} catch (err: any) {
+				toast.error(err.detail ?? "Unknown error");
+			}
+		}
 
-	return <>
-		<Navbar />
-		<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
-			<div className="p-6 space-y-8">
+		fetchData();
+	}, [parsedFamilyId]);
+
+	async function handleAddItem(name: string, type: string) {
+		try {
+			await addItem({ familyId: parsedFamilyId, name, type });
+			toast.success("Created item");
+			const its = await getFamilyItems({ familyId: parsedFamilyId });
+			setItems(its);
+		} catch (err: any) {
+			toast.error(err.detail ?? "Unknown error");
+		}
+	}
+
+	async function handleMakeInvite(username: string) {
+		try {
+			await createInvite({ username: username, familyId: parsedFamilyId });
+			toast.success("Invite sent");
+		}
+		catch (err: any) {
+			toast.error(err.detail ?? "Unknown error");
+		}
+	}
+
+	const weekDays = useMemo(() => mapReservationsToWeek(reservations), [reservations]);
+
+	return (
+		<>
+			<Navbar />
+			<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100 p-6 space-y-8">
 				{/* Calendar */}
 				<section>
 					<h2 className="text-2xl font-bold mb-4">This Week's Reservations</h2>
 					<div className="grid grid-cols-7 gap-3">
-						{weekDays.map((day) => (
-							<div
-								key={day.date}
-								className="bg-white rounded-xl p-3 shadow-sm min-h-[120px]"
-							>
+						{weekDays.map(day => (
+							<div key={day.date} className="bg-white rounded-xl p-3 shadow-sm min-h-[120px]">
 								<h3 className="text-sm font-semibold text-gray-600 mb-2">{day.label}</h3>
-
-								{day.reservations.length === 0 && (
-									<p className="text-xs text-gray-400">No reservations</p>
-								)}
-
-								{day.reservations.map((r) => (
+								{day.reservations.length === 0 && <p className="text-xs text-gray-400">No reservations</p>}
+								{day.reservations.map(r => (
 									<motion.div
 										key={r.id}
 										className="mt-2 rounded-lg bg-purple-200 px-2 py-1 text-xs font-medium text-purple-800 cursor-pointer"
@@ -96,12 +156,9 @@ export default function Family() {
 							<p className="text-gray-500">No members yet.</p>
 						) : (
 							<ul className="space-y-2">
-								{members.map((m) => (
-									<li
-										key={m.id}
-										className="flex justify-between p-2 bg-purple-50 rounded-lg"
-									>
-										<span>{m.username}</span>
+								{members.map(m => (
+									<li key={m.id} className="flex justify-between p-2 bg-purple-50 rounded-lg">
+										<span>{m.name}</span>
 										<span className="text-gray-600 capitalize">{m.role}</span>
 									</li>
 								))}
@@ -126,9 +183,10 @@ export default function Family() {
 							<p className="text-gray-500">No items yet.</p>
 						) : (
 							<ul className="space-y-2">
-								{items.map((item) => (
+								{items.map(item => (
 									<li key={item.id} className="p-2 bg-purple-50 rounded-lg flex justify-between">
 										<span>{item.name}</span>
+										<span className="text-gray-600 capitalize">{item.type}</span>
 									</li>
 								))}
 							</ul>
@@ -140,14 +198,15 @@ export default function Family() {
 				<NewMemberModal
 					isOpen={memberModalOpen}
 					onClose={() => setMemberModalOpen(false)}
-					onSubmit={handleAddMember}
+					onSubmit={handleMakeInvite}
 				/>
 				<NewItemModal
 					isOpen={itemModalOpen}
 					onClose={() => setItemModalOpen(false)}
 					onSubmit={handleAddItem}
+					existingTypes={items.map(i => i.type)}
 				/>
 			</div>
-		</div>
-	</>;
+		</>
+	);
 }

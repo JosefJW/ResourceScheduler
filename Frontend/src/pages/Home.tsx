@@ -215,44 +215,46 @@ export default function Home() {
 				</div>
 
 				{/* Pending Invites */}
-				<div className="mt-8">
-					<div className="flex items-center justify-between mb-3">
-						<h2 className="text-lg font-bold text-purple-500">
-							Pending Invites
-						</h2>
-					</div>
-					<div className="space-y-3">
-						{invites.map(invite => (
-							<div
-								key={invite.id}
-								className="rounded-2xl bg-white p-4 shadow flex flex-row items-center"
-							>
-								<div className="flex flex-col">
-									<h3 className="font-semibold text-lg text-purple-600">
-										{invite.familyName}
-									</h3>
-									<h4 className="font-semibold text-sm text-purple-600">
-										From {invite.inviterName} at {new Date(invite.createdAt).toLocaleString()}
-									</h4>
-								</div>
-								<div className="ml-auto flex flex-row">
-									<div
-										className="cursor-pointer rounded-xl text-white bg-red-600 p-4 shadow hover:bg-red-700 transition"
-										onClick={() => {handleInviteDecline(invite.id, invite.familyId)}}
-									>
-										Decline
+				{invites.length > 0 ?
+					<div className="mt-8">
+						<div className="flex items-center justify-between mb-3">
+							<h2 className="text-lg font-bold text-purple-500">
+								Pending Invites
+							</h2>
+						</div>
+						<div className="space-y-3">
+							{invites.map(invite => (
+								<div
+									key={invite.id}
+									className="rounded-2xl bg-white p-4 shadow flex flex-row items-center"
+								>
+									<div className="flex flex-col">
+										<h3 className="font-semibold text-lg text-purple-600">
+											{invite.familyName}
+										</h3>
+										<h4 className="font-semibold text-sm text-purple-600">
+											From {invite.inviterName} at {new Date(invite.createdAt).toLocaleString()}
+										</h4>
 									</div>
-									<div
-										className="cursor-pointer rounded-xl text-white bg-green-600 p-4 shadow hover:bg-green-700 transition ml-5"
-										onClick={() => {handleInviteAccept(invite.id, invite.familyId)}}
-									>
-										Accept
+									<div className="ml-auto flex flex-row">
+										<div
+											className="cursor-pointer rounded-xl text-white bg-red-600 p-4 shadow hover:bg-red-700 transition"
+											onClick={() => {handleInviteDecline(invite.id, invite.familyId)}}
+										>
+											Decline
+										</div>
+										<div
+											className="cursor-pointer rounded-xl text-white bg-green-600 p-4 shadow hover:bg-green-700 transition ml-5"
+											onClick={() => {handleInviteAccept(invite.id, invite.familyId)}}
+										>
+											Accept
+										</div>
 									</div>
 								</div>
-							</div>
-						))}
+							))}
+						</div>
 					</div>
-				</div>
+				: <></>}
 			</div>
 		</div>
 	);

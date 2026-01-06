@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ResourceScheduler.Data;
 using ResourceScheduler.Models;
 using ResourceScheduler.Auth;
+using ResourceScheduler.Dtos;
 
 namespace ResourceScheduler.Endpoints;
 
@@ -11,44 +12,37 @@ public static class ReservationEndpoints
 	{
 		// Post
 		// Add a new reservation
-		app.MapPost("/reservations", async (Reservation reservation, AppDbContext db, HttpContext ctx) =>
+		app.MapPost("/families/{familyId}/invite", async (long familyId, CreateInvite req, AppDbContext db, HttpContext ctx) =>
 		{
-			// Get the userId from the JWT
 			var userId = HttpContextExtensions.GetUserId(ctx);
 			if (userId == null) return Results.Unauthorized();
 
-			// Ensure the reservation has valid start and end times
-			if (reservation.StartTime >= reservation.EndTime)
-				return Results.BadRequest("Start time must be before end time.");
+			var isOwner = await db.FamilyMemberships
+				.AnyAsync(fm => fm.FamilyId == familyId && fm.UserId == userId.Value && fm.Role == "owner");
+			if (!isOwner) return Results.Forbid();
 
-			// Ensure the user is the reservation's family
-			var member = await db.FamilyMemberships.AnyAsync(fm => fm.FamilyId == reservation.FamilyId && fm.UserId == userId);
-			if (!member) return Results.Forbid();
+			var invitedUser = await db.Users.FirstOrDefaultAsync(u => u.Name == req.InvitedUsername);
+			if (invitedUser == null) return Results.NotFound();
 
-			// Ensure the item exists and belongs to the family
-			var item = await db.Items.FirstOrDefaultAsync(i => i.Id == reservation.ItemId);
-			if (item == null) return Results.NotFound("Item not found.");
-			if (item.FamilyId != reservation.FamilyId) return Results.Forbid();
+			var invitedUserId = invitedUser.Id;
 
-			// Start a transaction
-			using var transaction = await db.Database.BeginTransactionAsync();
+			var alreadyInvited = await db.FamilyInvitations
+				.AnyAsync(i => i.FamilyId == familyId && i.InvitedUserId == invitedUserId && !i.Accepted);
+			var alreadyMember = await db.FamilyMemberships
+				.AnyAsync(fm => fm.FamilyId == familyId && fm.UserId == invitedUserId);
+			if (alreadyInvited || alreadyMember)
+				return Results.Conflict("User is already invited or already a member.");
 
-			// Ensure the reservation doesn't overlap with any other reservation
-			var overlapping = await db.Reservations
-				.Where(r => r.ItemId == reservation.ItemId
-				&& r.StartTime < reservation.EndTime && r.EndTime > reservation.StartTime)
-				.AnyAsync();		
-			if (overlapping)
-				return Results.Conflict("Item is already reserved during this time.");
-			
-			// Make the reservation
-			db.Reservations.Add(reservation);
+			var invite = new FamilyInvitation
+			{
+				FamilyId = familyId,
+				InvitedUserId = invitedUserId,
+				InviterUserId = userId.Value
+			};
+
+			db.FamilyInvitations.Add(invite);
 			await db.SaveChangesAsync();
-
-			// End the transaction
-			await transaction.CommitAsync();
-
-			return Results.Created($"/reservations/{reservation.Id}", reservation);
+			return Results.Created($"/families/{familyId}/invite/{invite.Id}", invite);
 		})
 		.RequireAuthorization();
 

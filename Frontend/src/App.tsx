@@ -72,7 +72,7 @@ function App() {
 					}
 				/>
 				<Route
-					path="/family/:id"
+					path="/family/:familyId"
 					element={
 						<ProtectedRoute>
 							<Family />

@@ -130,7 +130,7 @@ public static class FamilyEndpoints
 
 		// Post
 		// Make an invitation to a family
-		app.MapPost("/families/{familyId}/invite", async (long familyId, long invitedUserId, AppDbContext db, HttpContext ctx) =>
+		app.MapPost("/families/{familyId}/invite", async (long familyId, string invitedUsername, AppDbContext db, HttpContext ctx) =>
 		{
 			// Get the userId from the JWT
 			var userId = HttpContextExtensions.GetUserId(ctx);
@@ -140,6 +140,14 @@ public static class FamilyEndpoints
 			var isOwner = await db.FamilyMemberships
 				.AnyAsync(fm => fm.FamilyId == familyId && fm.UserId == userId.Value && fm.Role == "owner");
 			if (!isOwner) return Results.Forbid();
+
+			// Get invited user
+			var invitedUser = await db.Users
+				.FirstOrDefaultAsync(u => u.Name == invitedUsername);
+			if (invitedUser == null) return Results.NotFound();
+
+			// Get invited userId
+			var invitedUserId = invitedUser.Id;
 
 			// Check if already invited or already a member
 			var alreadyInvited = await db.FamilyInvitations
@@ -337,6 +345,12 @@ public static class FamilyEndpoints
 					fm.User.Email,
 					fm.Role
 				})
+				.OrderBy(fm => 
+					fm.Role == "owner" ? 0 :
+					fm.Role == "admin" ? 1 :
+					fm.Role == "member" ? 2 :
+					3
+				)
 				.ToListAsync();
 
 			return Results.Ok(users);

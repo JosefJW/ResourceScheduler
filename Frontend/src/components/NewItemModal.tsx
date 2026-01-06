@@ -1,13 +1,21 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type NewItemModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (itemName: string) => void;
+  onSubmit: (itemName: string, type: string) => void;
+  existingTypes: string[];
 };
 
-export default function NewItemModal({ isOpen, onClose, onSubmit }: NewItemModalProps) {
+
+export default function NewItemModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  existingTypes,
+}: NewItemModalProps) {
   const [itemName, setItemName] = useState("");
+  const [itemType, setItemType] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -15,9 +23,10 @@ export default function NewItemModal({ isOpen, onClose, onSubmit }: NewItemModal
   }, [isOpen]);
 
   const handleSubmit = () => {
-    if (!itemName.trim()) return;
-    onSubmit(itemName.trim());
+    if (!itemName.trim() || !itemType.trim()) return;
+    onSubmit(itemName.trim(), itemType.trim());
     setItemName("");
+    setItemType("");
     onClose();
   };
 
@@ -36,6 +45,20 @@ export default function NewItemModal({ isOpen, onClose, onSubmit }: NewItemModal
           onChange={(e) => setItemName(e.target.value)}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 mb-4"
         />
+
+        <input
+          list="item-types"
+          type="text"
+          placeholder="Item type"
+          value={itemType}
+          onChange={(e) => setItemType(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 mb-4"
+        />
+        <datalist id="item-types">
+          {existingTypes.map((type) => (
+            <option key={type} value={type} />
+          ))}
+        </datalist>
 
         <div className="flex justify-end space-x-2">
           <button

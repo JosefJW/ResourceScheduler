@@ -2,6 +2,15 @@ import axios from "axios";
 
 const API_BASE = "http://localhost:5069";
 
+export type ApiError = {
+	detail: string;
+	statusCode: number;
+	title: string;
+	type: string;
+}
+
+
+
 export type GetUserReservationsResult = {
 	id: number;
 	familyId: number;
@@ -9,13 +18,6 @@ export type GetUserReservationsResult = {
 	itemName: string;
 	startTime: string;
 	endTime: string;
-}
-
-export type ApiError = {
-	detail: string;
-	statusCode: number;
-	title: string;
-	type: string;
 }
 
 export async function getUserReservations() {
@@ -33,5 +35,34 @@ export async function getUserReservations() {
 	catch (err: any) {
 		const errorData: ApiError = err.response?.data || { message: "Unknown error" };
 		throw errorData; // Unsuccessful
+	}
+}
+
+
+
+export type GetFamilyReservationsResult = {
+	id: number;
+	familyId: number;
+	itemId: number;
+	itemName: string;
+	startTime: string;
+	endTime: string;
+}
+
+export async function getFamilyReservations(data: { familyId: number }) {
+	try {
+		const res = await axios.get<GetFamilyReservationsResult[]>(
+			`${API_BASE}/reservations/family/${data.familyId}`,
+			{
+				headers: {
+					Authorization: `Bearer ${localStorage.getItem("JWT")}`
+				}
+			}
+		)
+		return res.data;
+	}
+	catch (err: any) {
+		const errorData: ApiError = err.response?.data || { message: "Unknown error" }
+		throw errorData;
 	}
 }

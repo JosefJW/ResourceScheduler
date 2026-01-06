@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ResourceScheduler.Data;
 using ResourceScheduler.Models;
 using ResourceScheduler.Auth;
+using ResourceScheduler.Dtos;
 
 namespace ResourceScheduler.Endpoints;
 
@@ -11,15 +12,23 @@ public static class ItemEndpoints
 	{
 		// Post
 		// Create an item
-		app.MapPost("/items", async (Item item, AppDbContext db, HttpContext ctx) =>
+		app.MapPost("/items", async (CreateItem req, AppDbContext db, HttpContext ctx) =>
 		{
 			// Get the userId from the JWT
 			var userId = HttpContextExtensions.GetUserId(ctx);
 			if (userId == null) return Results.Unauthorized();
 
 			// Ensure user is a member of the family that the item is in
-			var member = await db.FamilyMemberships.AnyAsync(fm => fm.FamilyId == item.FamilyId && fm.UserId == userId);
+			var member = await db.FamilyMemberships.AnyAsync(fm => fm.FamilyId == req.FamilyId && fm.UserId == userId);
 			if (!member) return Results.Forbid();
+
+			// Create the item
+			var item = new Item
+			{
+				Name = req.Name,
+				Type = req.Type,
+				FamilyId = req.FamilyId
+			};
 
 			// Add the item
 			db.Items.Add(item);
@@ -44,6 +53,14 @@ public static class ItemEndpoints
 			// Get the items
 			var items = await db.Items
 				.Where(i => i.FamilyId == familyId)
+				.Select(i => new
+				{
+					i.Id,
+					i.Name,
+					i.Type,
+					i.IsActive
+				})
+				.OrderBy(i => i.Type)
 				.ToListAsync();
 
 			return Results.Ok(items);
