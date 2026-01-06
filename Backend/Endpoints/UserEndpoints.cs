@@ -118,18 +118,21 @@ public static class UserEndpoints
 
 
 		// Get id
-		// Get the user with the specified id
-		app.MapGet("/users/{userId}", async (long userId, AppDbContext db, HttpContext ctx) => {
+		// Get the current user
+		app.MapGet("/user", async (AppDbContext db, HttpContext ctx) => {
 			// Get the userId from the JWT
-			var jwtUserId = HttpContextExtensions.GetUserId(ctx);
-			if (jwtUserId == null) return Results.Unauthorized();
-			if (jwtUserId != userId) return Results.Forbid();
+			var userId = HttpContextExtensions.GetUserId(ctx);
+			if (userId == null) return Results.Unauthorized();
 
 			// Get the user
 			var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
 			
 			if (user == null) return Results.NotFound();
-			return Results.Ok(user);
+			return Results.Ok(new
+			{
+				username = user.Name,
+				email = user.Email
+			});
 		})
 		.RequireAuthorization();
 
@@ -137,22 +140,21 @@ public static class UserEndpoints
 
 		// Put
 		// Update user's name
-		app.MapPut("/users/{userId}/name", async (long userId, string newName, AppDbContext db, HttpContext ctx) =>
+		app.MapPut("/user/name", async (UpdateUsername req, AppDbContext db, HttpContext ctx) =>
 		{
 			// Get the userId from the JWT
-			var jwtUserId = HttpContextExtensions.GetUserId(ctx);
-			if (jwtUserId == null) return Results.Unauthorized();
-			if (jwtUserId != userId) return Results.Forbid();
+			var userId = HttpContextExtensions.GetUserId(ctx);
+			if (userId == null) return Results.Unauthorized();
 
 			// Get the user
 			var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
 			if (user == null) return Results.NotFound();
 
 			// Update the user
-			user.Name = newName;
+			user.Name = req.NewName;
 			await db.SaveChangesAsync();
 
-			return Results.Ok(user);
+			return Results.Ok();
 		})
 		.RequireAuthorization();
 
@@ -160,15 +162,14 @@ public static class UserEndpoints
 
 		// Put
 		// Update user's email
-		app.MapPut("/users/{userId}/email", async (long userId, string newEmail, AppDbContext db, HttpContext ctx) =>
+		app.MapPut("/user/email", async (UpdateEmail req, AppDbContext db, HttpContext ctx) =>
 		{
 			// Get the userId from the JWT
-			var jwtUserId = HttpContextExtensions.GetUserId(ctx);
-			if (jwtUserId == null) return Results.Unauthorized();
-			if (jwtUserId != userId) return Results.Forbid();
+			var userId = HttpContextExtensions.GetUserId(ctx);
+			if (userId == null) return Results.Unauthorized();
 
 			// Ensure the email is unique
-			var emailExists = await db.Users.AnyAsync(u => u.Email == newEmail && u.Id != userId);
+			var emailExists = await db.Users.AnyAsync(u => u.Email == req.NewEmail && u.Id != userId);
 			if (emailExists) return Results.Conflict("Email is already in use.");
 
 			// Get the user
@@ -176,7 +177,7 @@ public static class UserEndpoints
 			if (user == null) return Results.NotFound();
 
 			// Update the user
-			user.Email = newEmail;
+			user.Email = req.NewEmail;
 			await db.SaveChangesAsync();
 
 			return Results.Ok(user);
@@ -187,23 +188,22 @@ public static class UserEndpoints
 
 		// Put
 		// Update user's password
-		app.MapPut("/users/{userId}/password", async (long userId, PasswordUpdate dto, AppDbContext db, HttpContext ctx) =>
+		app.MapPut("/user/password", async (UpdatePassword req, AppDbContext db, HttpContext ctx) =>
 		{
 			// Get the userId from the JWT
-			var jwtUserId = HttpContextExtensions.GetUserId(ctx);
-			if (jwtUserId == null) return Results.Unauthorized();
-			if (jwtUserId != userId) return Results.Forbid();
+			var userId = HttpContextExtensions.GetUserId(ctx);
+			if (userId == null) return Results.Unauthorized();
 
 			// Get the user
 			var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
 			if (user == null) return Results.NotFound();
 
 			// Check current password matches
-			if (!PasswordsMatch(dto.CurrentPassword, user.PasswordHash, user.PasswordSalt))
+			if (!PasswordsMatch(req.OldPassword, user.PasswordHash, user.PasswordSalt))
 				return Results.Forbid();
 
 			// Update to new password
-			(user.PasswordHash, user.PasswordSalt) = HashPassword(dto.NewPassword);
+			(user.PasswordHash, user.PasswordSalt) = HashPassword(req.NewPassword);
 			await db.SaveChangesAsync();
 
 			return Results.Ok();

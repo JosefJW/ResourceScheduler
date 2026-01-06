@@ -2,10 +2,11 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import NewGroupModal from "../components/NewGroupModal";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFamily, getFamilies, type GetFamiliesResult } from "./../services/family"
 import toast from "react-hot-toast";
 import { acceptInvite, declineInvite, getInvites, type GetInvitesResult } from "../services/invites";
+import { getUserReservations, type GetUserReservationsResult } from "../services/reservation";
 
 type Reservation = {
 	id: number;
@@ -18,21 +19,60 @@ type Day = {
 	reservations: Reservation[];
 };
 
-type Family = {
-	id: number;
-	name: string;
-};
+function mapReservationsToWeek(reservations: GetUserReservationsResult[]) {
+	const { startOfWeek } = getCurrentWeek();
 
-type Invite = {
-	id: number;
-	familyName: string;
-	from: string;
+	const weekDays: Day[] = Array.from({ length: 7 }).map((_, i) => {
+		const dayDate = new Date(startOfWeek);
+		dayDate.setDate(startOfWeek.getDate() + i);
+		const dayStr = dayDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+		// Filter reservations that overlap this day
+		const dayReservations = reservations.filter(r => {
+			const start = new Date(r.startTime);
+			const end = new Date(r.endTime);
+
+			// Overlaps this day if start <= end of day && end >= start of day
+			const dayStart = new Date(dayDate);
+			dayStart.setHours(0, 0, 0, 0);
+
+			const dayEnd = new Date(dayDate);
+			dayEnd.setHours(23, 59, 59, 999);
+
+			return start <= dayEnd && end >= dayStart;
+		}).map(r => ({ id: r.id, itemName: r.itemName }));
+
+		return {
+			label: dayDate.toLocaleDateString("en-US", { weekday: "short" }),
+			date: dayStr,
+			reservations: dayReservations,
+		};
+	});
+
+	return weekDays;
+}
+
+function getCurrentWeek() {
+	const now = new Date();
+
+	// Sunday
+	const startOfWeek = new Date(now);
+	startOfWeek.setDate(now.getDate() - now.getDay());
+	startOfWeek.setHours(0, 0, 0, 0);
+
+	// Saturday
+	const endOfWeek = new Date(startOfWeek);
+	endOfWeek.setDate(startOfWeek.getDate() + 6);
+	endOfWeek.setHours(23, 59, 59, 999);
+
+	return { startOfWeek, endOfWeek };
 }
 
 export default function Home() {
 	const [newGroupModalOpen, setNewGroupModalOpen] = useState(false);
 	const [groups, setGroups] = useState<GetFamiliesResult[]>([]);
 	const [invites, setInvites] = useState<GetInvitesResult[]>([]);
+	const [reservations, setReservations] = useState<GetUserReservationsResult[]>([]);
 	const navigate = useNavigate();
 
 	async function handleCreateGroup(name: string) {
@@ -67,6 +107,16 @@ export default function Home() {
 		}
 	}
 
+	async function getMyReservations() {
+		try {
+			const reservations = await getUserReservations();
+			setReservations(reservations);
+		}
+		catch (err: any) {
+			toast.error(err.detail);
+		}
+	}
+
 	async function handleInviteAccept(inviteId: number, familyId: number) {
 		try {
 			await acceptInvite({ familyId, inviteId });
@@ -79,7 +129,6 @@ export default function Home() {
 	}
 
 	async function handleInviteDecline(inviteId: number, familyId: number) {
-		// TODO
 		try {
 			await declineInvite({ familyId, inviteId });
 			await getMyInvites();
@@ -92,56 +141,11 @@ export default function Home() {
 	useEffect(() => {
 		getGroups();
 		getMyInvites();
+		getMyReservations();
 	}, [])
 
-	// Fake week data
-	const weekDays: Day[] = [
-		{
-			label: "Sun",
-			date: "2026-01-05",
-			reservations: [],
-		},
-		{
-			label: "Mon",
-			date: "2026-01-06",
-			reservations: [
-				{ id: 1, itemName: "Conference Room A" },
-			],
-		},
-		{
-			label: "Tue",
-			date: "2026-01-07",
-			reservations: [],
-		},
-		{
-			label: "Wed",
-			date: "2026-01-08",
-			reservations: [
-				{ id: 2, itemName: "Projector" },
-				{ id: 3, itemName: "Meeting Room B" },
-				{ id: 5, itemName: "Meeting Room and Fun House Number 52"},
-				{ id: 6, itemName: "Giant 6 7 Statue"},
-				{ id: 7, itemName: "Wowie"}
-			],
-		},
-		{
-			label: "Thu",
-			date: "2026-01-09",
-			reservations: [],
-		},
-		{
-			label: "Fri",
-			date: "2026-01-10",
-			reservations: [
-				{ id: 4, itemName: "Van" },
-			],
-		},
-		{
-			label: "Sat",
-			date: "2026-01-11",
-			reservations: [],
-		},
-	];
+	const weekDays = useMemo(() => mapReservationsToWeek(reservations), [reservations]);
+
 
 	return (
 		<div className="min-h-screen pb-10 bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
@@ -149,36 +153,24 @@ export default function Home() {
 			<div className="px-6 mt-6">
 				{/* Calendar */}
 				<div className="grid grid-cols-7 gap-3">
-					{weekDays.map(day => (
-						<div
-							key={day.date}
-							className="bg-white rounded-xl p-3 shadow-sm min-h-[120px]"
+				{weekDays.map(day => (
+					<div key={day.date} className="bg-white rounded-xl p-3 shadow-sm min-h-[120px]">
+					<h3 className="text-sm font-semibold text-gray-600 mb-2">{day.label}</h3>
+					{day.reservations.length === 0 && <p className="text-xs text-gray-400">No reservations</p>}
+					{day.reservations.map(r => (
+						<motion.div
+						key={r.id}
+						className="mt-2 rounded-lg bg-purple-200 px-2 py-1 text-xs font-medium text-purple-800 cursor-pointer"
+						whileHover={{ scale: 1.05 }}
+						transition={{ type: "spring", stiffness: 500 }}
+						onClick={() => navigate(`/reservation/${r.id}`)}
 						>
-							<h3 className="text-sm font-semibold text-gray-600 mb-2">
-								{day.label}
-							</h3>
-
-							{day.reservations.length === 0 && (
-								<p className="text-xs text-gray-400">
-									No reservations
-								</p>
-							)}
-
-							{day.reservations.map(r => (
-								<motion.div
-									key={r.id}
-									className="mt-2 rounded-lg bg-purple-200 px-2 py-1 text-xs font-medium text-purple-800 cursor-pointer"
-									whileHover={{scale: 1.05}}
-									transition={{ type: "spring", stiffness: 500 }}
-									onClick={() => navigate(`/reservation/${r.id}`)}
-								>
-									{r.itemName}
-								</motion.div>
-							))}
-						</div>
+						{r.itemName}
+						</motion.div>
 					))}
+					</div>
+				))}
 				</div>
-
 				{/* Reservation Button */}
 				<button
 					onClick={() => navigate("/reserve")}
@@ -244,7 +236,6 @@ export default function Home() {
 									</h4>
 								</div>
 								<div className="ml-auto flex flex-row">
-									{/* TODO onClick for decline */}
 									<div
 										className="cursor-pointer rounded-xl text-white bg-red-600 p-4 shadow hover:bg-red-700 transition"
 										onClick={() => {handleInviteDecline(invite.id, invite.familyId)}}

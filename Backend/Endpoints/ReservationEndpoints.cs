@@ -150,15 +150,24 @@ public static class ReservationEndpoints
 
 		// Get
 		// Get all reservations for a specific user
-		app.MapGet("/reservations/user/{userId}", async (long userId, AppDbContext db, HttpContext ctx) => {
+		app.MapGet("/reservations/user", async (AppDbContext db, HttpContext ctx) => {
 			// Get the userId from the JWT
-			var jwtUserId = HttpContextExtensions.GetUserId(ctx);
-			if (jwtUserId == null) return Results.Unauthorized();
-			if (jwtUserId != userId) return Results.Forbid();
+			var userId = HttpContextExtensions.GetUserId(ctx);
+			if (userId == null) return Results.Unauthorized();
 
 			// Get the reservations
 			var reservations = await db.Reservations
 			.Where(r => r.UserId == userId)
+			.Include(r => r.Item)
+			.Select(r => new
+				{
+					r.Id,
+					r.FamilyId,
+					r.ItemId,
+					ItemName = r.Item.Name,
+					r.StartTime,
+					r.EndTime
+				})
 			.OrderBy(r => r.StartTime)
 			.ToListAsync();
 
