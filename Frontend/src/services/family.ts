@@ -52,7 +52,7 @@ export async function getFamilies() {
 				}
 			}
 		);
-		return res.data; // Successfully created family
+		return res.data; // Successfully retrieved family
 	}
 	catch (err: any) {
 		const errorData: ApiError = err.response?.data || { message: "Unknown error" };

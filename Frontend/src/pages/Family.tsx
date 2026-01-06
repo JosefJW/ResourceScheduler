@@ -19,15 +19,15 @@ type Day = {
 function getCurrentWeek() {
 	const now = new Date();
 	const dayOfWeek = now.getDay(); // 0 = Sunday
-	const monday = new Date(now);
-	monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7)); // shift to Monday
-	monday.setHours(0, 0, 0, 0);
+	const sunday = new Date(now);
+	sunday.setDate(now.getDate() - dayOfWeek);
+	sunday.setHours(0, 0, 0, 0);
 
-	const sunday = new Date(monday);
-	sunday.setDate(monday.getDate() + 6);
-	sunday.setHours(23, 59, 59, 999);
+	const saturday = new Date(sunday);
+	saturday.setDate(sunday.getDate() + 6);
+	saturday.setHours(23, 59, 59, 999);
 
-	return { startOfWeek: monday, endOfWeek: sunday };
+	return { startOfWeek: sunday, endOfWeek: saturday };
 }
 
 function mapReservationsToWeek(reservations: GetFamilyReservationsResult[]): Day[] {

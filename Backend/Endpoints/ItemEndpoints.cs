@@ -8,6 +8,19 @@ namespace ResourceScheduler.Endpoints;
 
 public static class ItemEndpoints
 {
+	// Helper function, normalizes strings for item types
+	static string NormalizeType(string input)
+	{
+		if (string.IsNullOrWhiteSpace(input))
+			return "";
+
+		input = input.Trim();
+		return char.ToUpper(input[0]) + input.Substring(1).ToLower();
+	}
+
+
+
+
 	public static void MapItemEndpoints(this WebApplication app)
 	{
 		// Post
@@ -26,7 +39,7 @@ public static class ItemEndpoints
 			var item = new Item
 			{
 				Name = req.Name,
-				Type = req.Type,
+				Type = NormalizeType(req.Type),
 				FamilyId = req.FamilyId
 			};
 
@@ -109,6 +122,12 @@ public static class ItemEndpoints
 			// Get the items
 			var items = await db.Items
 				.Where(i => i.FamilyId == familyId && i.Type == type)
+				.Select(i => new
+				{
+					i.Id,
+					i.Name,
+					i.IsActive
+				})
 				.ToListAsync();
 
 			return Results.Ok(items);
@@ -138,6 +157,35 @@ public static class ItemEndpoints
 		})
 		.RequireAuthorization();
 
+		
+
+		// Get
+		// Get all item types from the user
+		app.MapGet("/items/user/type", async (AppDbContext db, HttpContext ctx) =>
+		{
+			// Get the userId from the JWT
+			var userId = HttpContextExtensions.GetUserId(ctx);
+			if (userId == null) return Results.Unauthorized();
+
+			// Get the familyId of the families the user is in
+			var familyIds = await db.FamilyMemberships
+				.Where(fm => fm.UserId == userId)
+				.Select(fm => fm.FamilyId)
+				.Distinct()
+				.ToListAsync();
+
+			// Get the item types from those families
+			var types = await db.Items
+				.Where(i => familyIds.Contains(i.FamilyId))
+				.Select(i => i.Type)
+				.Distinct()
+				.OrderBy(type => type)
+				.ToListAsync();
+
+			return Results.Ok(types);
+		})
+		.RequireAuthorization();
+
 
 
 		// Put
@@ -158,7 +206,7 @@ public static class ItemEndpoints
 
 				// Update the item
 				existingItem.Name = item.Name;
-				existingItem.Type = item.Type;
+				existingItem.Type = NormalizeType(item.Type);
 				existingItem.IsActive = item.IsActive;
 				await db.SaveChangesAsync();
 				return Results.Ok(existingItem);

@@ -10,39 +10,64 @@ public static class ReservationEndpoints
 {
 	public static void MapReservationEndpoints(this WebApplication app)
 	{
+
 		// Post
 		// Add a new reservation
-		app.MapPost("/families/{familyId}/invite", async (long familyId, CreateInvite req, AppDbContext db, HttpContext ctx) =>
+		app.MapPost("/reservations", async (CreateReservation req, AppDbContext db, HttpContext ctx) =>
 		{
+			// Get the userId from the JWT
 			var userId = HttpContextExtensions.GetUserId(ctx);
 			if (userId == null) return Results.Unauthorized();
 
-			var isOwner = await db.FamilyMemberships
-				.AnyAsync(fm => fm.FamilyId == familyId && fm.UserId == userId.Value && fm.Role == "owner");
-			if (!isOwner) return Results.Forbid();
+			// Ensure the reservation has valid start and end times
+			if (req.StartTime >= req.EndTime)
+				return Results.BadRequest("Start time must be before end time.");
 
-			var invitedUser = await db.Users.FirstOrDefaultAsync(u => u.Name == req.InvitedUsername);
-			if (invitedUser == null) return Results.NotFound();
+			// Get the full item object
+			var item = await db.Items.FirstOrDefaultAsync(i => i.Id == req.ItemId);
+			if (item == null) return Results.NotFound();
 
-			var invitedUserId = invitedUser.Id;
+			// Ensure the user is the item's family
+			var member = await db.FamilyMemberships.AnyAsync(fm => fm.FamilyId == item.FamilyId && fm.UserId == userId);
+			if (!member) return Results.Forbid();
 
-			var alreadyInvited = await db.FamilyInvitations
-				.AnyAsync(i => i.FamilyId == familyId && i.InvitedUserId == invitedUserId && !i.Accepted);
-			var alreadyMember = await db.FamilyMemberships
-				.AnyAsync(fm => fm.FamilyId == familyId && fm.UserId == invitedUserId);
-			if (alreadyInvited || alreadyMember)
-				return Results.Conflict("User is already invited or already a member.");
+			// Start a transaction
+			using var transaction = await db.Database.BeginTransactionAsync();
 
-			var invite = new FamilyInvitation
+			// Ensure the reservation doesn't overlap with any other reservation
+			var overlapping = await db.Reservations
+				.Where(r => r.ItemId == req.ItemId
+				&& r.StartTime < req.EndTime && r.EndTime > req.StartTime)
+				.AnyAsync();
+			if (overlapping)
+				return Results.Conflict("Item is already reserved during this time.");
+
+			// Make the reservation
+			var reservation = new Reservation
 			{
-				FamilyId = familyId,
-				InvitedUserId = invitedUserId,
-				InviterUserId = userId.Value
+				ItemId = req.ItemId,
+				FamilyId = item.FamilyId,
+				UserId = (long)userId,
+				StartTime = req.StartTime,
+				EndTime = req.EndTime
 			};
-
-			db.FamilyInvitations.Add(invite);
+			db.Reservations.Add(reservation);
 			await db.SaveChangesAsync();
-			return Results.Created($"/families/{familyId}/invite/{invite.Id}", invite);
+
+			// End the transaction
+			await transaction.CommitAsync();
+
+			var res = new CreateReservationResponse(
+				reservation.Id,
+				reservation.ItemId,
+				item.Name,
+				reservation.FamilyId,
+				reservation.UserId,
+				reservation.StartTime,
+				reservation.EndTime
+			);
+
+			return Results.Created($"/reservations/{reservation.Id}", res);
 		})
 		.RequireAuthorization();
 
@@ -63,6 +88,15 @@ public static class ReservationEndpoints
 			var reservations = await db.Reservations
 			.Where(r => r.FamilyId == familyId)
 			.OrderBy(r => r.StartTime)
+			.Select(r => new
+			{
+				r.Id,
+				r.FamilyId,
+				r.ItemId,
+				ItemName = r.Item.Name,
+				r.StartTime,
+				r.EndTime
+			})
 			.ToListAsync();
 
 			return Results.Ok(reservations);
@@ -260,6 +294,23 @@ public static class ReservationEndpoints
 
 			return Results.Ok(deleteReservation);
 		})
+		.RequireAuthorization();
+	
+	
+	
+		// Get
+		// Check if there is an overlapping reservation for a specific item at a specified time
+		app.MapGet("/reservations/item/{itemId}/from/{startTime}/to/{endTime}",
+			async (long itemId, DateTimeOffset startTime, DateTimeOffset endTime, AppDbContext db, HttpContext ctx) =>
+			{
+				bool overlaps = await db.Reservations
+					.AnyAsync(r => r.ItemId == itemId &&
+						r.StartTime < endTime &&
+						r.EndTime > startTime);
+
+				return Results.Ok(new { available = !overlaps });
+			}
+		)
 		.RequireAuthorization();
 	}
 }
