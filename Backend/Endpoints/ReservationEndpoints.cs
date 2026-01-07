@@ -163,14 +163,25 @@ public static class ReservationEndpoints
 			if (userId == null) return Results.Unauthorized();
 
 			// Get the reservation
-			var reservation = await db.Reservations.FirstOrDefaultAsync(r => r.Id == reservationId);
+			var reservation = await db.Reservations
+			.Include(r => r.Item)
+			.Include(r => r.User)
+			.FirstOrDefaultAsync(r => r.Id == reservationId);
 			if (reservation == null) return Results.NotFound();
 
 			// Ensure the reservation and the user belong to the same family
 			var member = await db.FamilyMemberships.AnyAsync(fm => fm.FamilyId == reservation.FamilyId && fm.UserId == userId);
 			if (!member) return Results.Forbid();
 
-			return Results.Ok(reservation);
+			return Results.Ok(new
+			{
+				reservationId = reservation.Id,
+				itemName = reservation.Item.Name,
+				userId = reservation.UserId,
+				username = reservation.User.Name,
+				startTime = reservation.StartTime,
+				endTime = reservation.EndTime
+			});
 		})
 		.RequireAuthorization();
 

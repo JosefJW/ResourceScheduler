@@ -130,7 +130,7 @@ public static class FamilyEndpoints
 
 		// Post
 		// Make an invitation to a family
-		app.MapPost("/families/{familyId}/invite", async (long familyId, string invitedUsername, AppDbContext db, HttpContext ctx) =>
+		app.MapPost("/families/{familyId}/invite", async (long familyId, CreateInvite req, AppDbContext db, HttpContext ctx) =>
 		{
 			// Get the userId from the JWT
 			var userId = HttpContextExtensions.GetUserId(ctx);
@@ -143,7 +143,7 @@ public static class FamilyEndpoints
 
 			// Get invited user
 			var invitedUser = await db.Users
-				.FirstOrDefaultAsync(u => u.Name == invitedUsername);
+				.FirstOrDefaultAsync(u => u.Name == req.InvitedUsername);
 			if (invitedUser == null) return Results.NotFound();
 
 			// Get invited userId

@@ -7,6 +7,7 @@ import { createFamily, getFamilies, type GetFamiliesResult } from "./../services
 import toast from "react-hot-toast";
 import { acceptInvite, declineInvite, getInvites, type GetInvitesResult } from "../services/invites";
 import { getUserReservations, type GetUserReservationsResult } from "../services/reservation";
+import Calendar from "../components/Calendar";
 
 type Reservation = {
 	id: number;
@@ -152,25 +153,7 @@ export default function Home() {
 			<Navbar></Navbar>
 			<div className="px-6 mt-6">
 				{/* Calendar */}
-				<div className="grid grid-cols-7 gap-3">
-				{weekDays.map(day => (
-					<div key={day.date} className="bg-white rounded-xl p-3 shadow-sm min-h-[120px]">
-					<h3 className="text-sm font-semibold text-gray-600 mb-2">{day.label}</h3>
-					{day.reservations.length === 0 && <p className="text-xs text-gray-400">No reservations</p>}
-					{day.reservations.map(r => (
-						<motion.div
-						key={r.id}
-						className="mt-2 rounded-lg bg-purple-200 px-2 py-1 text-xs font-medium text-purple-800 cursor-pointer"
-						whileHover={{ scale: 1.05 }}
-						transition={{ type: "spring", stiffness: 500 }}
-						onClick={() => navigate(`/reservation/${r.id}`)}
-						>
-						{r.itemName}
-						</motion.div>
-					))}
-					</div>
-				))}
-				</div>
+				<Calendar reservations={reservations} />
 				{/* Reservation Button */}
 				<button
 					onClick={() => navigate("/reserve")}

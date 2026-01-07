@@ -1,6 +1,8 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
+import toast from "react-hot-toast";
+import { getReservation, type GetReservationResult } from "../services/reservation";
 
 type Reservation = {
 	id: number;
@@ -12,42 +14,45 @@ type Reservation = {
 
 export default function Reservation() {
 	const { reservationId } = useParams<{ reservationId: string }>();
-	const [reservation, setReservation] = useState<Reservation | null>(null);
+	const [reservation, setReservation] = useState<GetReservationResult | null>(null);
 	const [loading, setLoading] = useState(true);
+	const navigate = useNavigate();
+
+	async function fetchReservation() {
+		try {
+			const reservationIdNum = Number(reservationId);
+			if (isNaN(reservationIdNum)) {
+				navigate("/NotFound");
+				return null;
+			}
+			const fetchedReservation = await getReservation({ reservationId: reservationIdNum });
+			setReservation(fetchedReservation);
+			console.log(fetchedReservation);
+		}
+		catch (err: any) {
+			toast.error(err.detail);
+		}
+	}
 
 	useEffect(() => {
-		async function fetchReservation() {
-			if (!reservationId) return;
-
-			// TODO: Backend get reservation
-			const data: Reservation = {
-				id: 1,
-				itemName: "6 7 Generator",
-				date: "0800",
-				time: "0980",
-				familyName: "Wolf"
-			}
-			setReservation(data);
-			setLoading(false);
-		}
-
 		fetchReservation();
 	}, [reservationId]);
 
-	if (loading) return <div>Loading reservation...</div>;
-	if (!reservation) return <div>Reservation not found!</div>;
-
-	return <div>
-		<Navbar />
-		<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
-			<br />
-			<div className="p-6 max-w-md mx-auto bg-white rounded-2xl shadow-md">
-				<h1 className="text-2xl font-bold mb-4">Reservation Details</h1>
-				<p><strong>Item:</strong> {reservation.itemName}</p>
-				<p><strong>Family:</strong> {reservation.familyName}</p>
-				<p><strong>Date:</strong> {reservation.date}</p>
-				<p><strong>Time:</strong> {reservation.time}</p>
+	return <>{
+		reservation ?
+		<div>
+			<Navbar />
+			<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
+				<br />
+				<div className="p-6 max-w-md mx-auto bg-white rounded-2xl shadow-md">
+					<h1 className="text-2xl font-bold mb-4">Reservation Details</h1>
+					<p><strong>Item:</strong> {reservation.itemName}</p>
+					<p><strong>User:</strong> {reservation.username}</p>
+					<p><strong>From:</strong> {new Date(reservation.startTime).toLocaleString()}</p>
+					<p><strong>To:</strong> {new Date(reservation.endTime).toLocaleString()}</p>
+				</div>
 			</div>
-		</div>;
-	</div>
+		</div>
+		: <>Loading reservation...</>
+	}</>
 }

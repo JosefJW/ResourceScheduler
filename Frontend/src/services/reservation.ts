@@ -117,3 +117,32 @@ export async function makeReservation( data: { itemId: number, startTime: string
 		throw errorData;
 	}
 }
+
+
+
+export type GetReservationResult = {
+	reservationId: number,
+	itemName: string,
+	userId: number,
+	username: string,
+	startTime: string,
+	endTime: string,
+}
+
+export async function getReservation( data: { reservationId: number }) {
+	try {
+		const res = await axios.get<GetReservationResult>(
+			`${API_BASE}/reservations/${data.reservationId}`,
+			{
+				headers: {
+					Authorization: `Bearer ${localStorage.getItem("JWT")}`
+				}
+			}
+		)
+		return res.data;
+	}
+	catch (err: any) {
+		const errorData: ApiError = err.response?.data || { detail: "Unknown error" }
+		throw errorData;
+	}
+}
