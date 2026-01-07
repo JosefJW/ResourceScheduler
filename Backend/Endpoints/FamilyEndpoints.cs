@@ -81,7 +81,7 @@ public static class FamilyEndpoints
 
 		// Get
 		// Get a family by id
-		app.MapGet("/families/{id}", async (long familyId, AppDbContext db, HttpContext ctx) => {
+		app.MapGet("/families/{familyId}", async (long familyId, AppDbContext db, HttpContext ctx) => {
 			// Get the userId from the JWT
 			var userId = HttpContextExtensions.GetUserId(ctx);
 			if (userId == null) return Results.Unauthorized();
@@ -91,8 +91,15 @@ public static class FamilyEndpoints
 				.AnyAsync(fm => fm.UserId == userId.Value && fm.FamilyId == familyId);
 			if (!isMember) return Results.Forbid();
 
+			// Get the family name
+			var family = await db.Families.FindAsync(familyId);
+			if (family == null) return Results.NotFound();
+
 			// Return the family if it exists
-			return await db.Families.FindAsync(familyId) is Family family ? Results.Ok(family) : Results.NotFound();
+			return Results.Ok(new
+			{
+				familyName = family.Name
+			});
 		})
 		.RequireAuthorization();
 

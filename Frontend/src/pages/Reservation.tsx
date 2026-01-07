@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import toast from "react-hot-toast";
 import { getReservation, type GetReservationResult } from "../services/reservation";
+import HomeButton from "../components/HomeButton";
 
 type Reservation = {
 	id: number;
@@ -42,6 +43,7 @@ export default function Reservation() {
 		reservation ?
 		<div>
 			<Navbar />
+			<HomeButton />
 			<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
 				<br />
 				<div className="p-6 max-w-md mx-auto bg-white rounded-2xl shadow-md">

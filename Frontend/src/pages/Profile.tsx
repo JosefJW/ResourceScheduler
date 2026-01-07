@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getUser, updateEmail, updatePassword, updateUsername, type GetUserResult } from "../services/auth";
 import toast from "react-hot-toast";
+import Navbar from "../components/Navbar";
+import HomeButton from "../components/HomeButton";
 
 export default function Profile() {
 	const [savedUsername, setSavedUsername] = useState("");
@@ -59,18 +61,10 @@ export default function Profile() {
 	fetchUserInformation()
 	}, []);
 
-	return (
+	return <>
+		<Navbar />
+		<HomeButton />
 		<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100 flex flex-col items-center p-6">
-			{/* Back button */}
-			<motion.div
-				className="cursor-pointer w-16 h-16 absolute top-4 left-4 text-white rounded-full text-lg font-bold flex items-center justify-center"
-				whileHover={{ scale: 1.2 }}
-				transition={{ type: "spring", stiffness: 500 }}
-				onClick={() => navigate("/home")}
-			>
-				<div className="ml-5 w-8 h-8 border-l-8 border-r-0 border-b-8 border-black transform rotate-45"></div>
-			</motion.div>
-
 			<h1 className="text-3xl font-bold text-center text-purple-500 mb-12">
 				Hey, {savedUsername}!
 			</h1>
@@ -147,5 +141,5 @@ export default function Profile() {
 				</button>
 			</div>
 		</div>
-	);
+	</>;
 }

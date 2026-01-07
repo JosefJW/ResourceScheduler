@@ -4,10 +4,9 @@ import toast from "react-hot-toast";
 import { getFamilyItems, getFamilyItemsOfType, type GetFamilyItemsOfTypeResult, type GetFamilyItemsResult, getUserTypes, type GetUserTypesResult } from "../services/item";
 import { getFamilies, type GetFamiliesResult } from "../services/family";
 import { checkItemAvailability, makeReservation, type CheckItemAvailabilityResult } from "../services/reservation";
-
-type Family = { id: number; name: string };
-type ItemType = { id: number; name: string };
-type Item = { id: number; name: string; familyId: number };
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import HomeButton from "../components/HomeButton";
 
 export default function ReserveItem() {
 	const [allFamilies, setAllFamilies] = useState<GetFamiliesResult[]>([]);
@@ -21,6 +20,7 @@ export default function ReserveItem() {
 	const [selectedEndTime, setSelectedEndTime] = useState("");
 	const [availableItems, setAvailableItems] = useState<GetFamilyItemsOfTypeResult[]>([]);
 	const [loading, setLoading] = useState(false);
+	const navigate = useNavigate();
 
 	async function getItemTypes() {
 		try {
@@ -99,8 +99,8 @@ export default function ReserveItem() {
 			toast.error("Please fill all selections first");
 			return;
 		}
-		const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}:00Z`).toISOString();
-		const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}:00Z`).toISOString();
+		const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}`).toISOString();
+		const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}`).toISOString();
 		if (startUTC >= endUTC) {
 			toast.error("Start date must be before end date");
 			return;
@@ -130,8 +130,8 @@ export default function ReserveItem() {
 	// Handle reservation
 	const handleReserve = async (itemId: number) => {
 		try {
-			const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}:00Z`).toISOString();
-			const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}:00Z`).toISOString();
+			const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}`).toISOString();
+			const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}`).toISOString();
 			if (startUTC >= endUTC) {
 				toast.error("Start date must be before end date");
 				return;
@@ -158,6 +158,7 @@ export default function ReserveItem() {
 
 	return <div>
 		<Navbar></Navbar>
+		<HomeButton></HomeButton>
 		<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100 p-6 flex flex-col items-center">
 			<h1 className="text-3xl font-bold text-purple-500 mb-8">Reserve an Item</h1>
 
