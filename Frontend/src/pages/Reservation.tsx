@@ -16,7 +16,6 @@ type Reservation = {
 export default function Reservation() {
 	const { reservationId } = useParams<{ reservationId: string }>();
 	const [reservation, setReservation] = useState<GetReservationResult | null>(null);
-	const [loading, setLoading] = useState(true);
 	const navigate = useNavigate();
 
 	async function fetchReservation() {

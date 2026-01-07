@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { getUser, updateEmail, updatePassword, updateUsername, type GetUserResult } from "../services/auth";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
