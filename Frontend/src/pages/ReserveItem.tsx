@@ -4,10 +4,8 @@ import toast from "react-hot-toast";
 import { getFamilyItems, getFamilyItemsOfType, type GetFamilyItemsOfTypeResult, type GetFamilyItemsResult, getUserTypes, type GetUserTypesResult } from "../services/item";
 import { getFamilies, type GetFamiliesResult } from "../services/family";
 import { checkItemAvailability, makeReservation, type CheckItemAvailabilityResult } from "../services/reservation";
-
-type Family = { id: number; name: string };
-type ItemType = { id: number; name: string };
-type Item = { id: number; name: string; familyId: number };
+import HomeButton from "../components/HomeButton";
+import MadeReservationModal from "../components/MadeReservationModal";
 
 export default function ReserveItem() {
 	const [allFamilies, setAllFamilies] = useState<GetFamiliesResult[]>([]);
@@ -21,6 +19,12 @@ export default function ReserveItem() {
 	const [selectedEndTime, setSelectedEndTime] = useState("");
 	const [availableItems, setAvailableItems] = useState<GetFamilyItemsOfTypeResult[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [showModal, setShowModal] = useState(false);
+	const [reservedItem, setReservedItem] = useState<{
+		name: string;
+		start: string;
+		end: string;
+	} | null>(null);
 
 	async function getItemTypes() {
 		try {
@@ -99,8 +103,8 @@ export default function ReserveItem() {
 			toast.error("Please fill all selections first");
 			return;
 		}
-		const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}:00Z`).toISOString();
-		const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}:00Z`).toISOString();
+		const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}`).toISOString();
+		const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}`).toISOString();
 		if (startUTC >= endUTC) {
 			toast.error("Start date must be before end date");
 			return;
@@ -130,15 +134,25 @@ export default function ReserveItem() {
 	// Handle reservation
 	const handleReserve = async (itemId: number) => {
 		try {
-			const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}:00Z`).toISOString();
-			const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}:00Z`).toISOString();
+			const startUTC = new Date(`${selectedStartDate}T${selectedStartTime}`).toISOString();
+			const endUTC = new Date(`${selectedEndDate}T${selectedEndTime}`).toISOString();
 			if (startUTC >= endUTC) {
 				toast.error("Start date must be before end date");
 				return;
 			}
 
 			makeReservation({ itemId: itemId, startTime: startUTC, endTime: endUTC });
-			toast.success("Reservation made");
+			
+			const item = availableItems.find(i => i.id === itemId);
+			if (!item) return;
+
+			setReservedItem({
+				name: item.name,
+				start: new Date(startUTC).toLocaleString(),
+				end: new Date(endUTC).toLocaleString()
+			});
+
+			setShowModal(true);
 
 			setAvailableItems((prev) => prev.filter((item) => item.id !== itemId));
 		}
@@ -158,6 +172,7 @@ export default function ReserveItem() {
 
 	return <div>
 		<Navbar></Navbar>
+		<HomeButton></HomeButton>
 		<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100 p-6 flex flex-col items-center">
 			<h1 className="text-3xl font-bold text-purple-500 mb-8">Reserve an Item</h1>
 
@@ -195,7 +210,7 @@ export default function ReserveItem() {
 										type="checkbox"
 										value={f.id}
 										checked={selectedFamilies.includes(f.id)}
-										onChange={(e) => {
+										onChange={() => {
 											const id = f.id;
 											setSelectedFamilies((prev) =>
 												prev.includes(id)
@@ -283,11 +298,19 @@ export default function ReserveItem() {
 						</>
 					) : (
 						<div className="text-center text-gray-400">
-							No items available
+							All items reserved during this time.
 						</div>
 					)}
 				</div>
 			</div>
 		</div>
+		{showModal && reservedItem && (
+			<MadeReservationModal
+				itemName={reservedItem.name}
+				start={reservedItem.start}
+				end={reservedItem.end}
+				onClose={() => setShowModal(false)}
+			/>
+		)}
 	</div>;
 }

@@ -1,21 +1,22 @@
-import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import NewMemberModal from "../components/NewMemberModal";
 import NewItemModal from "../components/NewItemModal";
 import toast from "react-hot-toast";
-import { getFamilyMembers, type GetFamilyMembersResult } from "../services/family";
+import { getFamily, type GetFamilyResult, getFamilyMembers, type GetFamilyMembersResult } from "../services/family";
 import { addItem, getFamilyItems, type GetFamilyItemsResult } from "../services/item";
 import { getFamilyReservations, type GetFamilyReservationsResult } from "../services/reservation";
 import { createInvite } from "../services/invites";
 import Calendar from "../components/Calendar";
+import HomeButton from "../components/HomeButton";
 
 export default function Family() {
 	const navigate = useNavigate();
 	const { familyId } = useParams<{ familyId: string }>();
 	const parsedFamilyId = Number(familyId);
 
+	const [familyName, setFamilyName] = useState<GetFamilyResult>();
 	const [members, setMembers] = useState<GetFamilyMembersResult[]>([]);
 	const [items, setItems] = useState<GetFamilyItemsResult[]>([]);
 	const [reservations, setReservations] = useState<GetFamilyReservationsResult[]>([]);
@@ -27,6 +28,8 @@ export default function Family() {
 	useEffect(() => {
 		async function fetchData() {
 			try {
+				const famName = await getFamily({ familyId: parsedFamilyId });
+				setFamilyName(famName);
 				const mems = await getFamilyMembers({ familyId: parsedFamilyId });
 				setMembers(mems);
 				const its = await getFamilyItems({ familyId: parsedFamilyId });
@@ -61,11 +64,19 @@ export default function Family() {
 			toast.error(err.detail ?? "Unknown error");
 		}
 	}
-
+	console.log(familyName);
 	return (
 		<>
 			<Navbar />
+			<HomeButton />
 			<div className="min-h-screen bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100 p-6 space-y-8">
+				{
+					familyName ?
+					<div className="flex flex-col items-center">
+						<h2 className="text-2xl font-bold">{ familyName.familyName }</h2>
+					</div>
+					: <br />
+				}
 				{/* Calendar */}
 				<Calendar reservations={reservations} />
 

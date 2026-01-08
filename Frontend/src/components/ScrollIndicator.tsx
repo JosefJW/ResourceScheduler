@@ -1,14 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 
 export default function ScrollIndicator() {
-  const [scrollY, setScrollY] = useState(0);
   const y = useMotionValue(0);
 
   // Track scroll
   useEffect(() => {
     const handleScroll = () => {
-      setScrollY(window.scrollY);
       y.set(window.scrollY);
     };
     window.addEventListener("scroll", handleScroll);

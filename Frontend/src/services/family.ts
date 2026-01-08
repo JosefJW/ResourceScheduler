@@ -37,6 +37,29 @@ export async function createFamily(data: { name: string }) {
 
 
 
+export type GetFamilyResult = {
+	familyName: string;
+}
+
+export async function getFamily(data: { familyId: number }) {
+	try {
+		const res = await axios.get<GetFamilyResult>(
+			`${API_BASE}/families/${data.familyId}`,
+			{
+				headers: {
+					Authorization: `Bearer ${localStorage.getItem("JWT")}`
+				}
+			}
+		)
+		return res.data;
+	}
+	catch (err: any) {
+		const errorData: ApiError = err.response?.data || { message: "Unknown error" };
+		throw errorData; // Unsuccessful
+	}
+}
+
+
 export type GetFamiliesResult = {
 	id: number;
 	name: string;

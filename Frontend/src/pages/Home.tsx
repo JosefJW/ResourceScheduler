@@ -1,73 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import NewGroupModal from "../components/NewGroupModal";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createFamily, getFamilies, type GetFamiliesResult } from "./../services/family"
 import toast from "react-hot-toast";
 import { acceptInvite, declineInvite, getInvites, type GetInvitesResult } from "../services/invites";
 import { getUserReservations, type GetUserReservationsResult } from "../services/reservation";
 import Calendar from "../components/Calendar";
-
-type Reservation = {
-	id: number;
-	itemName: string;
-};
-
-type Day = {
-	label: string;
-	date: string;
-	reservations: Reservation[];
-};
-
-function mapReservationsToWeek(reservations: GetUserReservationsResult[]) {
-	const { startOfWeek } = getCurrentWeek();
-
-	const weekDays: Day[] = Array.from({ length: 7 }).map((_, i) => {
-		const dayDate = new Date(startOfWeek);
-		dayDate.setDate(startOfWeek.getDate() + i);
-		const dayStr = dayDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
-
-		// Filter reservations that overlap this day
-		const dayReservations = reservations.filter(r => {
-			const start = new Date(r.startTime);
-			const end = new Date(r.endTime);
-
-			// Overlaps this day if start <= end of day && end >= start of day
-			const dayStart = new Date(dayDate);
-			dayStart.setHours(0, 0, 0, 0);
-
-			const dayEnd = new Date(dayDate);
-			dayEnd.setHours(23, 59, 59, 999);
-
-			return start <= dayEnd && end >= dayStart;
-		}).map(r => ({ id: r.id, itemName: r.itemName }));
-
-		return {
-			label: dayDate.toLocaleDateString("en-US", { weekday: "short" }),
-			date: dayStr,
-			reservations: dayReservations,
-		};
-	});
-
-	return weekDays;
-}
-
-function getCurrentWeek() {
-	const now = new Date();
-
-	// Sunday
-	const startOfWeek = new Date(now);
-	startOfWeek.setDate(now.getDate() - now.getDay());
-	startOfWeek.setHours(0, 0, 0, 0);
-
-	// Saturday
-	const endOfWeek = new Date(startOfWeek);
-	endOfWeek.setDate(startOfWeek.getDate() + 6);
-	endOfWeek.setHours(23, 59, 59, 999);
-
-	return { startOfWeek, endOfWeek };
-}
 
 export default function Home() {
 	const [newGroupModalOpen, setNewGroupModalOpen] = useState(false);
@@ -144,9 +83,6 @@ export default function Home() {
 		getMyInvites();
 		getMyReservations();
 	}, [])
-
-	const weekDays = useMemo(() => mapReservationsToWeek(reservations), [reservations]);
-
 
 	return (
 		<div className="min-h-screen pb-10 bg-gradient-to-b from-pink-100 via-yellow-100 to-green-100">
