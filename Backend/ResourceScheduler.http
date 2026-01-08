@@ -1,6 +1,0 @@
-@ResourceScheduler_HostAddress = http://localhost:5069
-
-GET {{ResourceScheduler_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

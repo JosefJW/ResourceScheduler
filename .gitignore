@@ -1,8 +1,0 @@
-*.user
-*.vs/
-
-backend/bin/
-backend/obj/
-backend/.vscode/
-backend/appsettings.Development.json
-backend/appsettings.Production.json
